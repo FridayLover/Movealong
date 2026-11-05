@@ -12,7 +12,17 @@
 
 ![MoveAlong website example showing the marketplace feed, nearby-items map, and AI room preview](docs/images/website-example.jpg)
 
-*Example visual of the MoveAlong experience: marketplace feed, nearby-items map, and AI room preview. This is a design/example image included for the README, not a live browser screenshot.*
+*Built from real photos used by the app: a real listing photo (sofa), real OpenStreetMap tiles of Bangkok with item pins, and a real room photo. Not a browser screenshot — run the app to see the live UI.*
+
+**Demo video:** [MoveAlong — 3-minute narrated demo (MP4)](docs/movealong-demo-3min.mp4) — the problem, feed, map/swipe, selling, AI room preview, Baan concierge, trust/handover, and how to run it. (Narrated slideshow using the same real listing/room photos and real OpenStreetMap tiles — not a screen recording.)
+
+### Real app captures
+
+| Feed | Map | Profile |
+|---|---|---|
+| ![MoveAlong feed](docs/images/Feed.png) | ![MoveAlong map](docs/images/map.png) | ![MoveAlong profile](docs/images/Profile.png) |
+
+Screen recordings from the real app: [AI Room recording](docs/images/AI%20Room.mov) · [Agent (Baan) recording](docs/images/Agent.mov)
 
 Pages shown in the example:
 
@@ -58,33 +68,6 @@ Pages shown in the example:
 | **Handover** | Pickup/self-delivery only — no shipping. Buyer contacts seller (email/CTA) and meets at lobby/public area. |
 
 Supported categories: `furniture`, `appliance`, `decor`, `kitchen`, `electronics`, `other`. Conditions: `new`, `like_new`, `good`, `fair`, `poor`. Delivery: `pickup`, `self_delivery`, `both`.
-
----
-
-## For hackathon judges — the 3-minute demo
-
-> Built for the Meta Global AI Developer Hackathon with the Meta Model API
-> (**Muse Spark** concierge + **Muse Image** room generation). Verify event
-> rules on the official event page — this README only claims what's in the code.
-
-1. **Run it:** `docker compose up --build` → open http://localhost:3000 (log in `demo@movealong.test / 123456`).
-2. **Discover (0:00–0:45):** the feed is nearest-first with `−% vs new`, FREE and must-go-by urgency. Open **Map** — your blue pin recenters the map; terracotta pins are items. Heart an item, add one to cart.
-3. **Try before you fetch (0:45–1:45):** **AI Room** → pick the saved room, select 2–3 items (or “Instant preview” from any card) → **Generate**. With a Meta key you get a photoreal Muse Image scene that must keep the room and products faithful (style/identity-locked prompt); without one, an instant on-device composite — the provider is always labelled.
-4. **Meet Baan (1:45–2:45):** the little house character floating bottom-right. **Recommend** mode ranks only real listings inside your distance/budget sliders. **Sell** mode: attach a photo, pick a condition → *Draft my listing* → *Use this draft — fill Sell for me* lands on the Sell form with your photos prefilled (you still click Publish). **Reply** mode drafts chat answers in your tone.
-5. **Sell in under a minute (2:45–3:00):** Sell form — real-place building autocomplete (nearest first), multi-angle photos, optional size, FREE toggle.
-
-### What is real vs mocked (read this before judging)
-
-| Area | Status |
-|---|---|
-| Marketplace, map, chat, cart, checkout reservation, saved rooms/searches, profiles/shops | **Real** (Prisma/SQLite, works as shipped) |
-| Muse Image room generation | **Real when `META_API_KEY`/`MODEL_API_KEY` set** (verified end-to-end); otherwise labelled instant composite |
-| Baan concierge (Muse Spark) | **Real when a Meta key is set**; otherwise a deterministic local agent, labelled "offline" |
-| Card payment (credits + checkout) | **Mocked** — pay-at-pickup is the intended real flow; connect Stripe to go live |
-| Seed listings/users/photos | **Demo data** — real Unsplash photos, clearly seeded accounts; not real sellers |
-| Push/email saved-search alerts | Counts only in profile; no push infra yet |
-
-More: [hackathon facts, rubric map & demo script](docs/hackathon.md) · [research & competitor evidence](docs/research.md) · [feature-by-feature audit](docs/feature-audit.md) · [design decisions](docs/design-decisions.md) · [what was actually verified](docs/validation.md)
 
 ---
 
@@ -574,6 +557,7 @@ Move `src/components/*` and `src/lib/*` into `packages/ui`, import from both `ap
 | "Application error: a client-side exception" right after clicking **Generate** | Fixed — the preview panel dereferenced a null result while loading. Pull the latest code and rebuild (`docker compose up --build`); the panel now has explicit loading / empty / result states, and Generate prunes items that no longer exist instead of surfacing an API 404. |
 | AI `429 RATE_LIMIT` | You hit 10 generations or 20 agent turns in a minute — wait for the `Retry-After` seconds shown and try again. This protects your credits and the Meta budget. |
 | "Photoreal provider note: unknown parameter `seed` — showing the instant composite" | Fixed — Meta Muse Image rejects `seed`; it is now sent only to the Replicate fallback. Pull the latest code and rebuild. (Generation is `temperature: 0` everywhere; if a provider note ever names `temperature`, report it — it can be dropped from the image calls the same way.) |
+| "Photoreal provider note: failed to fetch image_url: URL is not fetchable by this service" | Fixed — Meta fetches `image_url` itself and cannot reach many third-party/localhost URLs. The server now downloads every room/item/agent photo first and inlines it as a base64 data URL (`src/lib/imageInline.ts`), so Meta never has to fetch anything. Pull the latest code and rebuild. |
 | AI `402 NO_CREDITS` | Buy a pack or subscribe to Pro at `/credits` (mock). |
 | AI `403 ITEM_LIMIT` | You picked more than your tier allows (Free 3 / Plus 5 / Pro 8). Remove one or upgrade. |
 | AI `403 ROOM_LIMIT` | Delete a saved room or upgrade (Free 1 / Plus 5 / Pro 30). |

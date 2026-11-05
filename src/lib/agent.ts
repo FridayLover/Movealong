@@ -8,6 +8,7 @@
  * the user's distance/budget preferences and ranked, sell drafts and chat drafts still work.
  */
 import { haversine, discountPercent } from "./utils";
+import { inlineImages, toInlineImage } from "./imageInline";
 
 export const AGENT_MODEL = process.env.AGENT_MODEL || "muse-spark-1.3";
 
@@ -144,8 +145,9 @@ async function callMuseSpark(input: AgentTurnInput): Promise<{ reply: string; re
   const candidateText = input.candidates.slice(0, 20).map(candidateLine).join("\n") || "(no products match the current preferences)";
 
   const content: any[] = [{ type: "input_text", text: `${system}\n\nProducts:\n${candidateText}\n\nConversation:\n${input.history.slice(-8).map((h) => `${h.role}: ${h.content}`).join("\n")}\nuser: ${input.latest}` }];
-  if (input.roomImage) content.push({ type: "input_image", image_url: input.roomImage });
-  for (const img of (input.productImages || []).slice(0, 4)) content.push({ type: "input_image", image_url: img });
+  // Inline photos as data URLs — Meta cannot fetch third-party/localhost URLs itself.
+  if (input.roomImage) { const r = await toInlineImage(input.roomImage); if (r) content.push({ type: "input_image", image_url: r }); }
+  for (const img of await inlineImages((input.productImages || []).slice(0, 4))) content.push({ type: "input_image", image_url: img });
 
   try {
     // 30s budget: on timeout/error we return null and runAgent answers with the

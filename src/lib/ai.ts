@@ -15,6 +15,7 @@
  */
 
 import { buildRoomPrompt, NEGATIVE_PROMPT, GEN_SEED, GEN_TEMPERATURE, type PromptItem } from "./prompt";
+import { inlineImages, toInlineImage } from "./imageInline";
 
 export type AiItemDetail = PromptItem & { images: string[] };
 
@@ -87,10 +88,14 @@ async function generateWithMeta(input: AiInput): Promise<AiResult> {
       : input.itemTitles.map((t) => ({ title: t, description: "", category: "furniture", condition: "good", imageCount: 1 }));
   const promptText = buildRoomPrompt({ items: details, userPrompt: input.prompt });
 
+  // Meta fetches image_url itself and rejects unfetchable third-party URLs,
+  // so inline everything as data URLs first (room first, then item photos).
+  const roomInline = await toInlineImage(input.roomImage);
+  if (!roomInline) return { provider: "meta-muse", resultImage: null, error: "Room image could not be read — please re-upload it" };
+  const itemInline = await inlineImages(input.itemImages);
   const content: any[] = [{ type: "input_text", text: promptText }];
-  // Room first
-  content.push({ type: "input_image", image_url: input.roomImage });
-  for (const img of input.itemImages) content.push({ type: "input_image", image_url: img });
+  content.push({ type: "input_image", image_url: roomInline });
+  for (const img of itemInline) content.push({ type: "input_image", image_url: img });
 
   try {
     const res = await fetchWithTimeout("https://api.meta.ai/v1/responses", {

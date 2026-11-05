@@ -644,3 +644,14 @@ test("ai: Meta Muse Image calls must not send seed (provider rejects it as unkno
   const replicateSection = src.slice(src.indexOf("generateWithReplicate"));
   assert.match(replicateSection, /seed/, "Replicate fallback keeps the fixed seed (it accepts it)");
 });
+
+test("ai: images are inlined as data URLs before Meta calls (provider cannot fetch third-party URLs)", () => {
+  const helper = read("src/lib/imageInline.ts");
+  assert.match(helper, /toInlineImage/, "shared inline helper exists");
+  assert.match(helper, /data:\$\{type\};base64/, "produces data URLs");
+  assert.match(helper, /startsWith\("data:"\)/, "already-inline data URLs pass through");
+  const ai = read("src/lib/ai.ts");
+  assert.match(ai, /toInlineImage|inlineImages/, "room generation inlines images before sending");
+  const agent = read("src/lib/agent.ts");
+  assert.match(agent, /toInlineImage|inlineImages/, "agent inlines attached/room photos before sending");
+});
