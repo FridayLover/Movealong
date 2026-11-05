@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+.git
+*.db
+*.log
+.env*
+!/.env.example
+README.md
